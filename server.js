@@ -126,4 +126,19 @@ if (process.argv[2] === '--create-admin') {
   process.exit(0);
 }
 
+// Créer admin automatiquement depuis les variables d'environnement
+const envUser = process.env.ADMIN_USER;
+const envPass = process.env.ADMIN_PASS;
+if (envUser && envPass) {
+  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(envUser);
+  if (!existing) {
+    db.prepare('INSERT INTO users (username, password, is_admin) VALUES (?, ?, 1)').run(envUser, bcrypt.hashSync(envPass, 10));
+    console.log(`✅ Admin "${envUser}" créé depuis les variables d'environnement !`);
+  } else {
+    // Mettre à jour le mot de passe si déjà existant
+    db.prepare('UPDATE users SET password = ? WHERE username = ?').run(bcrypt.hashSync(envPass, 10), envUser);
+    console.log(`✅ Admin "${envUser}" mis à jour !`);
+  }
+}
+
 app.listen(PORT, () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
