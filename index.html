@@ -52,20 +52,38 @@
   .server-info{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);margin-bottom:24px;display:flex;gap:24px;flex-wrap:wrap}
   .server-info span{color:var(--text)}
   .action-row{display:flex;gap:10px;flex-wrap:wrap}
-  /* Console */
   .console-box{background:#0d1117;border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:'Space Mono',monospace;font-size:12px;color:#a0aec0;height:280px;overflow-y:auto;line-height:1.6}
   .console-line{padding:1px 0}
   .console-line.warn{color:var(--amber)}
   .console-line.error{color:var(--red)}
   .console-line.info{color:var(--green)}
-  /* Admin */
-  .user-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
-  .user-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-family:'Space Mono',monospace;font-size:13px}
-  .badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:4px;background:var(--green-dim);color:var(--green);margin-left:10px}
-  .badge.admin{background:rgba(59,130,246,.2);color:var(--blue)}
-  .create-form{display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:end;margin-top:20px}
+
+  /* Create form */
+  .create-form{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:20px}
   .create-form input{margin-bottom:0}
   .field{display:flex;flex-direction:column;gap:6px}
+
+  /* Permissions checkboxes dans le form */
+  .perm-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)}
+  .perm-row label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:0}
+  .perm-row input[type="checkbox"]{width:14px;height:14px;accent-color:var(--green);margin:0;cursor:pointer}
+
+  /* User list */
+  .user-list{display:flex;flex-direction:column;gap:10px}
+  .user-row{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .user-row-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
+  .user-info{display:flex;align-items:center;gap:8px;font-family:'Space Mono',monospace;font-size:13px}
+  .user-actions{display:flex;gap:8px;align-items:center}
+  .badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:4px;background:var(--green-dim);color:var(--green)}
+  .badge.admin{background:rgba(59,130,246,.2);color:var(--blue)}
+
+  /* Permissions inline dans la user-row */
+  .perm-panel{padding:10px 16px 14px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .perm-toggle{display:flex;align-items:center;gap:6px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);cursor:pointer;user-select:none}
+  .perm-toggle input[type="checkbox"]{width:14px;height:14px;accent-color:var(--green);margin:0;cursor:pointer}
+  .perm-toggle.active{color:var(--text)}
+  .perm-save-btn{margin-left:auto}
+
   #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 22px;font-family:'Space Mono',monospace;font-size:13px;transition:transform .3s ease;z-index:200}
   #toast.show{transform:translateX(-50%) translateY(0)}
   #toast.ok{border-color:var(--green);color:var(--green)}
@@ -129,13 +147,25 @@
   <!-- Admin -->
   <div class="card" id="admin-card" style="display:none">
     <div class="card-title">Gestion des comptes</div>
+
+    <!-- Formulaire création -->
     <div class="create-form">
       <div class="field"><label>Nom</label><input type="text" id="new-user" placeholder="joueur123"></div>
       <div class="field"><label>Mot de passe</label><input type="password" id="new-pass" placeholder="••••••"></div>
-      <div class="field"><label>Admin?</label><input type="checkbox" id="new-admin" style="width:18px;height:18px;margin-top:10px;accent-color:var(--green)"></div>
       <div class="field"><label>&nbsp;</label><button class="btn btn-green btn-small" onclick="createUser()">+ Créer</button></div>
     </div>
-    <div style="margin-top:8px" class="card-title">Comptes</div>
+
+    <!-- Permissions du nouveau compte -->
+    <div class="perm-row" style="margin-bottom:20px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-right:8px">Permissions :</span>
+      <label><input type="checkbox" id="np-admin"> Admin</label>
+      <label><input type="checkbox" id="np-start"> Démarrer</label>
+      <label><input type="checkbox" id="np-stop"> Arrêter</label>
+      <label><input type="checkbox" id="np-restart"> Restart</label>
+      <label><input type="checkbox" id="np-fix"> Fix</label>
+    </div>
+
+    <div class="card-title">Comptes</div>
     <div class="user-list" id="user-list"></div>
   </div>
 </div>
@@ -197,12 +227,12 @@ async function showApp() {
 }
 
 const STATUS_MAP = {
-  stopped:    { label:'Arrêté',          color:'var(--muted)',  dot:'' },
-  starting:   { label:'Démarrage…',      color:'var(--amber)',  dot:'starting' },
-  running:    { label:'En ligne',         color:'var(--green)',  dot:'running' },
-  stopping:   { label:'Arrêt…',          color:'var(--red)',    dot:'stopping' },
-  restarting: { label:'Restart…',        color:'var(--amber)',  dot:'restarting' },
-  fixing:     { label:'Fix en cours…',   color:'var(--amber)',  dot:'fixing' },
+  stopped:    { label:'Arrêté',         color:'var(--muted)',  dot:'' },
+  starting:   { label:'Démarrage…',     color:'var(--amber)',  dot:'starting' },
+  running:    { label:'En ligne',        color:'var(--green)',  dot:'running' },
+  stopping:   { label:'Arrêt…',         color:'var(--red)',    dot:'stopping' },
+  restarting: { label:'Restart…',       color:'var(--amber)',  dot:'restarting' },
+  fixing:     { label:'Fix en cours…',  color:'var(--amber)',  dot:'fixing' },
 };
 
 async function updateStatus() {
@@ -222,9 +252,7 @@ function renderStatus(data) {
   lbl.textContent = s.label;
   lbl.style.color = s.color;
   const meta = document.getElementById('status-meta');
-  if (data.requested_by && data.status !== 'stopped')
-    meta.textContent = `par ${data.requested_by}`;
-  else meta.textContent = '';
+  meta.textContent = (data.requested_by && data.status !== 'stopped') ? `par ${data.requested_by}` : '';
 
   const busy = !['stopped','running'].includes(data.status);
   document.getElementById('btn-start').disabled   = data.status !== 'stopped';
@@ -256,27 +284,102 @@ async function serverAction(action) {
   } catch(e) { toast(e.message, 'err'); }
 }
 
+// ---- Admin ----
+
 async function loadUsers() {
   const r = await fetch(`${API}/api/admin/users`, { headers:{ Authorization:`Bearer ${token}` } });
   const users = await r.json();
-  document.getElementById('user-list').innerHTML = users.map(u => `
+  const list = document.getElementById('user-list');
+
+  list.innerHTML = users.map(u => {
+    const p = u.permissions || {};
+    const isAdmin = u.is_admin;
+    return `
     <div class="user-row">
-      <span>${u.username}${u.is_admin ? '<span class="badge admin">admin</span>' : '<span class="badge">joueur</span>'}</span>
-      <button class="btn btn-muted btn-small" onclick="deleteUser(${u.id},'${u.username}')">Supprimer</button>
-    </div>`).join('');
+      <div class="user-row-header">
+        <div class="user-info">
+          <span>${u.username}</span>
+          ${isAdmin ? '<span class="badge admin">admin</span>' : '<span class="badge">joueur</span>'}
+        </div>
+        <div class="user-actions">
+          <button class="btn btn-muted btn-small" onclick="deleteUser(${u.id},'${u.username}')">Supprimer</button>
+        </div>
+      </div>
+      ${!isAdmin ? `
+      <div class="perm-panel" id="perm-panel-${u.id}">
+        <label class="perm-toggle ${p.can_start?'active':''}">
+          <input type="checkbox" ${p.can_start?'checked':''} onchange="togglePerm(this,${u.id})"> Démarrer
+        </label>
+        <label class="perm-toggle ${p.can_stop?'active':''}">
+          <input type="checkbox" ${p.can_stop?'checked':''} onchange="togglePerm(this,${u.id})"> Arrêter
+        </label>
+        <label class="perm-toggle ${p.can_restart?'active':''}">
+          <input type="checkbox" ${p.can_restart?'checked':''} onchange="togglePerm(this,${u.id})"> Restart
+        </label>
+        <label class="perm-toggle ${p.can_fix?'active':''}">
+          <input type="checkbox" ${p.can_fix?'checked':''} onchange="togglePerm(this,${u.id})"> Fix
+        </label>
+        <button class="btn btn-green btn-small perm-save-btn" onclick="savePerms(${u.id})">Sauvegarder</button>
+      </div>` : `
+      <div class="perm-panel" style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">
+        Toutes les permissions (admin)
+      </div>`}
+    </div>`;
+  }).join('');
+}
+
+function togglePerm(checkbox, userId) {
+  // Met à jour le style active du label parent
+  checkbox.parentElement.classList.toggle('active', checkbox.checked);
+}
+
+async function savePerms(userId) {
+  const panel = document.getElementById(`perm-panel-${userId}`);
+  const boxes = panel.querySelectorAll('input[type="checkbox"]');
+  const permissions = {
+    can_start:   boxes[0].checked,
+    can_stop:    boxes[1].checked,
+    can_restart: boxes[2].checked,
+    can_fix:     boxes[3].checked,
+  };
+  try {
+    const r = await fetch(`${API}/api/admin/users/${userId}/permissions`, {
+      method: 'PATCH',
+      headers: { Authorization:`Bearer ${token}`, 'Content-Type':'application/json' },
+      body: JSON.stringify({ permissions })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    toast('Permissions sauvegardées !', 'ok');
+  } catch(e) { toast(e.message, 'err'); }
 }
 
 async function createUser() {
-  const username = document.getElementById('new-user').value.trim();
-  const password = document.getElementById('new-pass').value;
-  const is_admin = document.getElementById('new-admin').checked;
+  const username  = document.getElementById('new-user').value.trim();
+  const password  = document.getElementById('new-pass').value;
+  const is_admin  = document.getElementById('np-admin').checked;
+  const permissions = {
+    can_start:   document.getElementById('np-start').checked,
+    can_stop:    document.getElementById('np-stop').checked,
+    can_restart: document.getElementById('np-restart').checked,
+    can_fix:     document.getElementById('np-fix').checked,
+  };
   if (!username || !password) { toast('Remplis tous les champs','err'); return; }
-  const r = await fetch(`${API}/api/admin/create-user`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body: JSON.stringify({username,password,is_admin}) });
+  const r = await fetch(`${API}/api/admin/create-user`, {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' },
+    body: JSON.stringify({username, password, is_admin, permissions})
+  });
   const data = await r.json();
   if (!r.ok) { toast(data.error,'err'); return; }
   toast(data.message,'ok');
   document.getElementById('new-user').value = '';
   document.getElementById('new-pass').value = '';
+  document.getElementById('np-admin').checked = false;
+  document.getElementById('np-start').checked = false;
+  document.getElementById('np-stop').checked = false;
+  document.getElementById('np-restart').checked = false;
+  document.getElementById('np-fix').checked = false;
   loadUsers();
 }
 
