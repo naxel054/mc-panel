@@ -7,17 +7,17 @@ const path    = require('path');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 const SECRET       = 'mcpanel_jwt_secret_2024';
-const AGENT_SECRET = 'metsunevraimotdepasse123';
+const AGENT_SECRET = process.env.AGENT_SECRET || 'metsunevraimotdepasse123';
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Stockage en mémoire ──────────────────────────────────────
+app.get('/health', (req, res) => res.send('ok'));
+
 const users = [];
 let serverState = { status: 'stopped', requested_by: null, updated_at: new Date().toISOString() };
 
-// Créer admin depuis variables d'environnement au démarrage
 const envUser = process.env.ADMIN_USER;
 const envPass = process.env.ADMIN_PASS;
 if (envUser && envPass) {
@@ -25,7 +25,6 @@ if (envUser && envPass) {
   console.log(`✅ Admin "${envUser}" créé !`);
 }
 
-// ── Auth ─────────────────────────────────────────────────────
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   const user = users.find(u => u.username === username);
@@ -47,7 +46,6 @@ function admin(req, res, next) {
   next();
 }
 
-// ── Statut ───────────────────────────────────────────────────
 app.get('/api/status', auth, (req, res) => res.json(serverState));
 
 app.post('/api/start', auth, (req, res) => {
@@ -64,7 +62,6 @@ app.post('/api/stop', auth, (req, res) => {
   res.json({ success: true, message: 'Arrêt demandé !' });
 });
 
-// ── Agent ────────────────────────────────────────────────────
 app.get('/api/agent/poll', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
   res.json(serverState);
@@ -79,7 +76,6 @@ app.post('/api/agent/confirm', (req, res) => {
   res.json({ success: true });
 });
 
-// ── Admin ────────────────────────────────────────────────────
 app.post('/api/admin/create-user', auth, admin, (req, res) => {
   const { username, password, is_admin = 0 } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Champs manquants' });
@@ -98,4 +94,4 @@ app.delete('/api/admin/users/:id', auth, admin, (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(PORT, () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
