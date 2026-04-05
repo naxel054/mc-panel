@@ -104,12 +104,11 @@ function serverAction(action) {
     const permMap = { start: 'can_start', stop: 'can_stop', restart: 'can_restart', fix: 'can_fix' };
     if (!req.user.is_admin && !hasPerm(req.user.id, permMap[action]))
       return res.status(403).json({ error: 'Permission refusée' });
-    if (action === 'start' && state.status !== 'stopped')
+    if (action === 'start' && !['stopped','unknown'].includes(state.status))
       return res.status(409).json({ error: `Déjà : ${state.status}` });
-    if (action === 'stop' && state.status !== 'running')
+    if (action === 'restart' && !['running'].includes(state.status))
       return res.status(409).json({ error: 'Pas en ligne' });
-    if (action === 'restart' && state.status !== 'running')
-      return res.status(409).json({ error: 'Pas en ligne' });
+    // Stop autorisé même si Railway a remis stopped (l'agent vérifie le vrai état)
     serverStates[id] = { status: action === 'fix' ? 'fixing' : action + 'ing', requested_by: req.user.username, updated_at: new Date().toISOString() };
     res.json({ success: true, message: `Action ${action} envoyée !` });
   };
