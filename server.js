@@ -109,7 +109,7 @@ function serverAction(action) {
     if (action === 'restart' && !['running'].includes(state.status))
       return res.status(409).json({ error: 'Pas en ligne' });
     // Stop autorisé même si Railway a remis stopped (l'agent vérifie le vrai état)
-    serverStates[id] = { status: action === 'fix' ? 'fixing' : action + 'ing', requested_by: req.user.username, updated_at: new Date().toISOString() };
+    serverStates[id] = { status: action === 'fix' ? 'fixing' : action === 'stop' ? 'stopping' : action === 'start' ? 'starting' : action === 'restart' ? 'restarting' : 'fixing', requested_by: req.user.username, updated_at: new Date().toISOString() };
     res.json({ success: true, message: `Action ${action} envoyée !` });
   };
 }
