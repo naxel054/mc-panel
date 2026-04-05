@@ -429,7 +429,7 @@ async function browseDir(p) {
   renderBreadcrumb(p);
   document.getElementById('file-list').innerHTML='<div style="color:var(--muted);font-family:\'Space Mono\',monospace;font-size:13px">Chargement…</div>';
   try {
-    const r = await fetch(`${API}/api/files?path=${encodeURIComponent(p)}`, {headers:{Authorization:`Bearer ${token}`}});
+    const r = await fetch(`${API}/api/files/${currentServerId}?path=${encodeURIComponent(p)}`, {headers:{Authorization:`Bearer ${token}`}});
     const data = await r.json();
     if (!r.ok) throw new Error(data.error);
     renderFileList(data.items||[]);
@@ -494,7 +494,7 @@ function getFileIcon(name) {
 
 async function downloadFile(filePath, name) {
   try {
-    const r = await fetch(`${API}/api/files/download?path=${encodeURIComponent(filePath)}`, {headers:{Authorization:`Bearer ${token}`}});
+    const r = await fetch(`${API}/api/files/${currentServerId}/download?path=${encodeURIComponent(filePath)}`, {headers:{Authorization:`Bearer ${token}`}});
     if (!r.ok) { toast('Erreur téléchargement','err'); return; }
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
@@ -518,7 +518,7 @@ async function uploadFile(file) {
   formData.append('file', file);
   formData.append('path', currentPath ? `${currentPath}/${file.name}` : file.name);
   try {
-    const r = await fetch(`${API}/api/files/upload`, {method:'POST',headers:{Authorization:`Bearer ${token}`},body:formData});
+    const r = await fetch(`${API}/api/files/${currentServerId}/upload`, {method:'POST',headers:{Authorization:`Bearer ${token}`},body:formData});
     const data = await r.json();
     if (!r.ok) throw new Error(data.error);
     toast(data.message,'ok');
@@ -529,7 +529,7 @@ async function uploadFile(file) {
 async function deleteFile(filePath, name) {
   if (!confirm(`Supprimer "${name}" ?`)) return;
   try {
-    const r = await fetch(`${API}/api/files?path=${encodeURIComponent(filePath)}`, {method:'DELETE',headers:{Authorization:`Bearer ${token}`}});
+    const r = await fetch(`${API}/api/files/${currentServerId}?path=${encodeURIComponent(filePath)}`, {method:'DELETE',headers:{Authorization:`Bearer ${token}`}});
     const data = await r.json();
     if (!r.ok || !data.success) throw new Error('Erreur suppression');
     toast(`"${name}" supprimé`,'ok');
