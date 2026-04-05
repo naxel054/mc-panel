@@ -185,6 +185,19 @@ app.get('/api/agent/poll', (req, res) => {
   res.json({ servers: serverStates, file_requests: pending });
 });
 
+// L'agent peut syncer son statut local au démarrage
+app.post('/api/agent/sync', (req, res) => {
+  if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
+  const { statuses } = req.body;
+  Object.entries(statuses || {}).forEach(([sid, status]) => {
+    if (serverStates[sid] && serverStates[sid].status === 'stopped') {
+      serverStates[sid].status = status;
+      serverStates[sid].updated_at = new Date().toISOString();
+    }
+  });
+  res.json({ success: true });
+});
+
 app.post('/api/agent/confirm', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
   const { serverId, status } = req.body;
