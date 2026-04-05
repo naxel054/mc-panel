@@ -25,7 +25,8 @@ let fileResponses = {};  // réponses de l'agent { reqId: data }
 
 const SERVERS = [
   { id: 'heloufSMP', name: 'HeloufSMP', description: 'Serveur SMP principal', icon: '⛏️', port: 50000 },
-  // { id: 'heloufCreatif', name: 'HeloufCréatif', description: 'Serveur créatif', icon: '🏗️', port: 50001 },
+  { id: 'helouftry', name: 'HeloufTry', description: 'Serveur Try', icon: '🎯', port: 50001 },
+
 ];
 
 const serverStates = {};
