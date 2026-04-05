@@ -232,6 +232,10 @@
     </div>
     <div style="margin-bottom:8px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase">Permissions du nouveau compte</div>
     <div id="new-user-perms" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:8px"></div>
+    <div style="margin-top:16px;margin-bottom:8px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase">Accès aux serveurs</div>
+    <div id="new-user-servers" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    <div style="margin-top:16px;margin-bottom:8px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase">Accès aux serveurs</div>
+    <div id="new-user-servers" style="display:flex;flex-wrap:wrap;gap:8px"></div>
   </div>
   <div class="card">
     <div class="card-title">Comptes existants</div>
@@ -543,6 +547,13 @@ async function showAdmin() {
 }
 
 function renderNewUserPerms() {
+  fetch(`${API}/api/admin/servers`,{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.json()).then(servers=>{
+    document.getElementById('new-user-servers').innerHTML = servers.map(s=>`<div class="server-chip" onclick="this.classList.toggle('active')" data-server="${s.id}">${s.icon} ${s.name}</div>`).join('');
+  }).catch(()=>{});
+  fetch(`${API}/api/admin/servers`,{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.json()).then(servers=>{
+    document.getElementById("new-user-servers").innerHTML = servers.map(s=>`<div class="server-chip" onclick="this.classList.toggle('active')" data-server="${s.id}">${s.icon} ${s.name}</div>`).join("");
+  }).catch(()=>{});
+
   document.getElementById('new-user-perms').innerHTML = ALL_PERMS.map(p =>
     `<div class="perm-item"><label><input type="checkbox" id="np-${p.key}"> ${p.label}</label></div>`
   ).join('') + `<div class="perm-item"><label><input type="checkbox" id="np-admin"> 👑 Admin (toutes les permissions)</label></div>`;
@@ -648,11 +659,12 @@ async function createUser() {
     const el = document.getElementById(`np-${p.key}`);
     if (el) permissions[p.key] = el.checked;
   });
+  const serverAccess = [...document.querySelectorAll('#new-user-servers .server-chip.active')].map(el=>el.dataset.server);
   if (!username||!password) { toast('Remplis tous les champs','err'); return; }
   const r = await fetch(`${API}/api/admin/create-user`, {
     method:'POST',
     headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-    body: JSON.stringify({username,password,is_admin,permissions,serverAccess:[]})
+    body: JSON.stringify({username,password,is_admin,permissions,serverAccess})
   });
   const data = await r.json();
   if (!r.ok) { toast(data.error,'err'); return; }
