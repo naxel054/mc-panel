@@ -120,9 +120,9 @@ app.post('/api/servers/:id/restart', auth, serverAction('restart'));
 app.post('/api/servers/:id/fix',     auth, serverAction('fix'));
 
 // ── Explorateur de fichiers ───────────────────────────────────
-function makeFileReq(action, filePath, data = null) {
+function makeFileReq(action, filePath, serverId, data = null) {
   const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  fileRequests.push({ id, action, path: filePath, data });
+  fileRequests.push({ id, action, path: filePath, serverId, data });
   return id;
 }
 
@@ -139,17 +139,17 @@ async function waitForResponse(reqId, timeout = 15000) {
   return null;
 }
 
-app.get('/api/files', auth, async (req, res) => {
+app.get('/api/files/:id', auth, async (req, res) => {
   if (!hasPerm(req.user.id, 'can_view_files')) return res.status(403).json({ error: 'Permission refusée' });
-  const reqId = makeFileReq('list', req.query.path || '');
+  const reqId = makeFileReq('list', req.query.path || '', req.params.id || 'heloufSMP');
   const result = await waitForResponse(reqId);
   if (!result) return res.status(504).json({ error: 'Agent timeout' });
   res.json(result);
 });
 
-app.get('/api/files/download', auth, async (req, res) => {
+app.get('/api/files/:id/download', auth, async (req, res) => {
   if (!hasPerm(req.user.id, 'can_view_files')) return res.status(403).json({ error: 'Permission refusée' });
-  const reqId = makeFileReq('download', req.query.path || '');
+  const reqId = makeFileReq('download', req.query.path || '', req.params.id || 'heloufSMP');
   const result = await waitForResponse(reqId);
   if (!result || !result.data) return res.status(504).json({ error: 'Agent timeout' });
   const filename = path.basename(req.query.path);
@@ -157,20 +157,20 @@ app.get('/api/files/download', auth, async (req, res) => {
   res.send(Buffer.from(result.data, 'base64'));
 });
 
-app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
+app.post('/api/files/:id/upload', auth, upload.single('file'), async (req, res) => {
   if (!hasPerm(req.user.id, 'can_edit_files')) return res.status(403).json({ error: 'Permission refusée' });
   if (!req.file) return res.status(400).json({ error: 'Aucun fichier' });
   const filePath = req.body.path || req.file.originalname;
   const b64 = req.file.buffer.toString('base64');
-  const reqId = makeFileReq('upload', filePath, b64);
+  const reqId = makeFileReq('upload', filePath, req.params.id || 'heloufSMP', b64);
   const result = await waitForResponse(reqId);
   if (!result) return res.status(504).json({ error: 'Agent timeout' });
   res.json({ success: result.ok, message: result.ok ? `"${req.file.originalname}" uploadé !` : 'Erreur upload' });
 });
 
-app.delete('/api/files', auth, async (req, res) => {
+app.delete('/api/files/:id', auth, async (req, res) => {
   if (!hasPerm(req.user.id, 'can_edit_files')) return res.status(403).json({ error: 'Permission refusée' });
-  const reqId = makeFileReq('delete', req.query.path || '');
+  const reqId = makeFileReq('delete', req.query.path || '', req.params.id || 'heloufSMP');
   const result = await waitForResponse(reqId);
   if (!result) return res.status(504).json({ error: 'Agent timeout' });
   res.json({ success: result.ok });
