@@ -11,43 +11,28 @@ const SECRET       = 'mcpanel_jwt_secret_2024';
 const AGENT_SECRET = process.env.AGENT_SECRET || 'heloufSMP_secret_2024';
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/health', (req, res) => res.send('ok'));
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    file.originalname.endsWith('.jar') ? cb(null, true) : cb(new Error('Seuls les .jar'));
-  }
-});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
-// ── Données en mémoire ────────────────────────────────────────
+// ── Données ───────────────────────────────────────────────────
 const users = [];
 let consoleLogs = [];
-let pendingPlugins = [];
+let fileRequests  = [];  // requêtes en attente pour l'agent
+let fileResponses = {};  // réponses de l'agent { reqId: data }
 
-// Serveurs définis ici — ajoute-en autant que tu veux !
 const SERVERS = [
-  {
-    id: 'heloufSMP',
-    name: 'HeloufSMP',
-    description: 'Serveur SMP principal',
-    icon: '⛏️',
-    port: 50000,
-  },
-  // Exemple pour ajouter un 2e serveur :
+  { id: 'heloufSMP', name: 'HeloufSMP', description: 'Serveur SMP principal', icon: '⛏️', port: 50000 },
   // { id: 'heloufCreatif', name: 'HeloufCréatif', description: 'Serveur créatif', icon: '🏗️', port: 50001 },
 ];
 
-// État de chaque serveur
 const serverStates = {};
 SERVERS.forEach(s => {
   serverStates[s.id] = { status: 'stopped', requested_by: null, updated_at: new Date().toISOString() };
 });
 
-// Accès des users aux serveurs : { userId: ['heloufSMP', ...] }
 const userServerAccess = {};
 
 const envUser = process.env.ADMIN_USER;
@@ -77,6 +62,13 @@ function hasServerAccess(userId, serverId) {
   return (userServerAccess[userId] || []).includes(serverId);
 }
 
+function hasPerm(userId, perm) {
+  const user = users.find(u => u.id === userId);
+  if (!user) return false;
+  if (user.is_admin) return true;
+  return !!(user.permissions || {})[perm];
+}
+
 // ── Login ─────────────────────────────────────────────────────
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
@@ -88,53 +80,36 @@ app.post('/api/login', (req, res) => {
 });
 
 // ── Serveurs ──────────────────────────────────────────────────
-// Liste des serveurs accessibles pour l'utilisateur
 app.get('/api/servers', auth, (req, res) => {
   const accessible = SERVERS.filter(s => hasServerAccess(req.user.id, s.id));
-  const result = accessible.map(s => ({
-    ...s,
-    state: serverStates[s.id]
-  }));
-  res.json(result);
+  res.json(accessible.map(s => ({ ...s, state: serverStates[s.id] })));
 });
 
-// Status d'un serveur
 app.get('/api/servers/:id/status', auth, (req, res) => {
   const { id } = req.params;
   if (!hasServerAccess(req.user.id, id)) return res.status(403).json({ error: 'Accès refusé' });
   const server = SERVERS.find(s => s.id === id);
-  if (!server) return res.status(404).json({ error: 'Serveur introuvable' });
-  res.json({ ...serverStates[id], logs: consoleLogs.slice(-50), server });
+  if (!server) return res.status(404).json({ error: 'Introuvable' });
+  const user = users.find(u => u.id === req.user.id);
+  res.json({ ...serverStates[id], logs: consoleLogs.slice(-50), server, permissions: user?.permissions || {} });
 });
 
-// Actions sur un serveur
 function serverAction(action) {
   return (req, res) => {
     const { id } = req.params;
     if (!hasServerAccess(req.user.id, id)) return res.status(403).json({ error: 'Accès refusé' });
     const state = serverStates[id];
-    if (!state) return res.status(404).json({ error: 'Serveur introuvable' });
-
-    const user = users.find(u => u.id === req.user.id);
-    const perms = user?.permissions || {};
-
-    if (action === 'start') {
-      if (!req.user.is_admin && !perms.can_start) return res.status(403).json({ error: 'Permission refusée' });
-      if (state.status !== 'stopped') return res.status(409).json({ error: `Serveur déjà : ${state.status}` });
-      serverStates[id] = { status: 'starting', requested_by: req.user.username, updated_at: new Date().toISOString() };
-    } else if (action === 'stop') {
-      if (!req.user.is_admin && !perms.can_stop) return res.status(403).json({ error: 'Permission refusée' });
-      if (state.status !== 'running') return res.status(409).json({ error: 'Serveur pas en ligne' });
-      serverStates[id] = { status: 'stopping', requested_by: req.user.username, updated_at: new Date().toISOString() };
-    } else if (action === 'restart') {
-      if (!req.user.is_admin && !perms.can_restart) return res.status(403).json({ error: 'Permission refusée' });
-      if (state.status !== 'running') return res.status(409).json({ error: 'Serveur pas en ligne' });
-      serverStates[id] = { status: 'restarting', requested_by: req.user.username, updated_at: new Date().toISOString() };
-    } else if (action === 'fix') {
-      if (!req.user.is_admin && !perms.can_fix) return res.status(403).json({ error: 'Permission refusée' });
-      serverStates[id] = { status: 'fixing', requested_by: req.user.username, updated_at: new Date().toISOString() };
-    }
-
+    if (!state) return res.status(404).json({ error: 'Introuvable' });
+    const permMap = { start: 'can_start', stop: 'can_stop', restart: 'can_restart', fix: 'can_fix' };
+    if (!req.user.is_admin && !hasPerm(req.user.id, permMap[action]))
+      return res.status(403).json({ error: 'Permission refusée' });
+    if (action === 'start' && state.status !== 'stopped')
+      return res.status(409).json({ error: `Déjà : ${state.status}` });
+    if (action === 'stop' && state.status !== 'running')
+      return res.status(409).json({ error: 'Pas en ligne' });
+    if (action === 'restart' && state.status !== 'running')
+      return res.status(409).json({ error: 'Pas en ligne' });
+    serverStates[id] = { status: action === 'fix' ? 'fixing' : action + 'ing', requested_by: req.user.username, updated_at: new Date().toISOString() };
     res.json({ success: true, message: `Action ${action} envoyée !` });
   };
 }
@@ -144,28 +119,74 @@ app.post('/api/servers/:id/stop',    auth, serverAction('stop'));
 app.post('/api/servers/:id/restart', auth, serverAction('restart'));
 app.post('/api/servers/:id/fix',     auth, serverAction('fix'));
 
-// Upload plugin
-app.post('/api/servers/:id/upload-plugin', auth, adminOnly, upload.single('plugin'), (req, res) => {
+// ── Explorateur de fichiers ───────────────────────────────────
+function makeFileReq(action, filePath, data = null) {
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  fileRequests.push({ id, action, path: filePath, data });
+  return id;
+}
+
+async function waitForResponse(reqId, timeout = 15000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (fileResponses[reqId] !== undefined) {
+      const res = fileResponses[reqId];
+      delete fileResponses[reqId];
+      return res;
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return null;
+}
+
+app.get('/api/files', auth, async (req, res) => {
+  if (!hasPerm(req.user.id, 'can_view_files')) return res.status(403).json({ error: 'Permission refusée' });
+  const reqId = makeFileReq('list', req.query.path || '');
+  const result = await waitForResponse(reqId);
+  if (!result) return res.status(504).json({ error: 'Agent timeout' });
+  res.json(result);
+});
+
+app.get('/api/files/download', auth, async (req, res) => {
+  if (!hasPerm(req.user.id, 'can_view_files')) return res.status(403).json({ error: 'Permission refusée' });
+  const reqId = makeFileReq('download', req.query.path || '');
+  const result = await waitForResponse(reqId);
+  if (!result || !result.data) return res.status(504).json({ error: 'Agent timeout' });
+  const filename = path.basename(req.query.path);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(Buffer.from(result.data, 'base64'));
+});
+
+app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
+  if (!hasPerm(req.user.id, 'can_edit_files')) return res.status(403).json({ error: 'Permission refusée' });
   if (!req.file) return res.status(400).json({ error: 'Aucun fichier' });
-  pendingPlugins.push({
-    serverId: req.params.id,
-    name: req.file.originalname,
-    data: req.file.buffer.toString('base64'),
-    uploaded_by: req.user.username,
-  });
-  res.json({ success: true, message: `Plugin "${req.file.originalname}" en attente !` });
+  const filePath = req.body.path || req.file.originalname;
+  const b64 = req.file.buffer.toString('base64');
+  const reqId = makeFileReq('upload', filePath, b64);
+  const result = await waitForResponse(reqId);
+  if (!result) return res.status(504).json({ error: 'Agent timeout' });
+  res.json({ success: result.ok, message: result.ok ? `"${req.file.originalname}" uploadé !` : 'Erreur upload' });
+});
+
+app.delete('/api/files', auth, async (req, res) => {
+  if (!hasPerm(req.user.id, 'can_edit_files')) return res.status(403).json({ error: 'Permission refusée' });
+  const reqId = makeFileReq('delete', req.query.path || '');
+  const result = await waitForResponse(reqId);
+  if (!result) return res.status(504).json({ error: 'Agent timeout' });
+  res.json({ success: result.ok });
 });
 
 // ── Agent ─────────────────────────────────────────────────────
 app.get('/api/agent/poll', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
-  res.json({ servers: serverStates, pending_plugins: pendingPlugins });
+  const pending = [...fileRequests];
+  fileRequests = [];
+  res.json({ servers: serverStates, file_requests: pending });
 });
 
 app.post('/api/agent/confirm', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
   const { serverId, status } = req.body;
-  if (!['running', 'stopped'].includes(status)) return res.status(400).json({ error: 'Statut invalide' });
   if (serverStates[serverId]) {
     serverStates[serverId].status = status;
     serverStates[serverId].updated_at = new Date().toISOString();
@@ -179,9 +200,10 @@ app.post('/api/agent/logs', (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/agent/plugin-installed', (req, res) => {
+app.post('/api/agent/file-response', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
-  pendingPlugins = pendingPlugins.filter(p => p.name !== req.body.name);
+  const { results } = req.body;
+  (results || []).forEach(r => { fileResponses[r.id] = r; });
   res.json({ success: true });
 });
 
@@ -197,18 +219,14 @@ app.post('/api/admin/create-user', auth, adminOnly, (req, res) => {
 });
 
 app.get('/api/admin/users', auth, adminOnly, (req, res) => {
-  res.json(users.map(u => ({
-    id: u.id, username: u.username, is_admin: u.is_admin,
-    permissions: u.permissions,
-    serverAccess: userServerAccess[u.id] || []
-  })));
+  res.json(users.map(u => ({ id: u.id, username: u.username, is_admin: u.is_admin, permissions: u.permissions, serverAccess: userServerAccess[u.id] || [] })));
 });
 
 app.patch('/api/admin/users/:id/permissions', auth, adminOnly, (req, res) => {
   const user = users.find(u => u.id == req.params.id);
-  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+  if (!user) return res.status(404).json({ error: 'Introuvable' });
   user.permissions = req.body.permissions || {};
-  userServerAccess[user.id] = req.body.serverAccess || userServerAccess[user.id] || [];
+  userServerAccess[user.id] = req.body.serverAccess || [];
   res.json({ success: true, message: 'Permissions sauvegardées !' });
 });
 
@@ -218,8 +236,6 @@ app.delete('/api/admin/users/:id', auth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/admin/servers', auth, adminOnly, (req, res) => {
-  res.json(SERVERS);
-});
+app.get('/api/admin/servers', auth, adminOnly, (req, res) => res.json(SERVERS));
 
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
