@@ -382,7 +382,7 @@ async function updateStatus() {
     lbl.textContent=s.label; lbl.style.color=s.color;
     document.getElementById('status-meta').textContent=(data.requested_by&&data.status!=='stopped')?`par ${data.requested_by}`:'';
     document.getElementById('btn-start').disabled=data.status!=='stopped';
-    document.getElementById('btn-stop').disabled=data.status!=='running';
+    document.getElementById('btn-stop').disabled=!['running','stopped'].includes(data.status) ? true : false;
     document.getElementById('btn-restart').disabled=data.status!=='running';
     document.getElementById('btn-fix').disabled=!['stopped','running'].includes(data.status);
     if (data.server) {
