@@ -28,6 +28,7 @@
   .btn-red{background:var(--red);color:#fff}
   .btn-amber{background:var(--amber);color:#000}
   .btn-blue{background:var(--blue);color:#fff}
+  .btn-purple{background:var(--purple);color:#fff}
   .btn-muted{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
   .btn-small{padding:6px 14px;font-size:13px}
   .app-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:20px;border-bottom:1px solid var(--border);width:100%}
@@ -62,10 +63,20 @@
   .server-info{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);margin-bottom:24px;display:flex;gap:24px;flex-wrap:wrap}
   .server-info span{color:var(--text)}
   .action-row{display:flex;gap:10px;flex-wrap:wrap}
-  .console-box{background:#0d1117;border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:'Space Mono',monospace;font-size:12px;color:#a0aec0;height:280px;overflow-y:auto;line-height:1.6}
+  /* Console */
+  .console-box{background:#0d1117;border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:16px;font-family:'Space Mono',monospace;font-size:12px;color:#a0aec0;height:280px;overflow-y:auto;line-height:1.6}
   .console-line.warn{color:var(--amber)}
   .console-line.error{color:var(--red)}
   .console-line.info{color:var(--green)}
+  /* Input console */
+  .console-input-row{display:flex;gap:0;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);overflow:hidden;background:#0d1117}
+  .console-prompt{display:flex;align-items:center;padding:0 12px;color:var(--green);font-family:'Space Mono',monospace;font-size:13px;font-weight:700;flex-shrink:0;background:#0d1117}
+  #console-input{flex:1;background:transparent;border:none;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;padding:10px 8px;outline:none}
+  #console-input::placeholder{color:var(--muted)}
+  #console-input:disabled{opacity:.4}
+  .console-send-btn{background:var(--green);border:none;color:#fff;font-family:'Syne',monospace;font-weight:700;font-size:13px;padding:10px 20px;cursor:pointer;transition:opacity .15s;flex-shrink:0}
+  .console-send-btn:hover{opacity:.85}
+  .console-send-btn:disabled{opacity:.3;cursor:not-allowed}
   /* Explorateur */
   .file-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
   .breadcrumb{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);flex:1;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
@@ -85,7 +96,7 @@
   .file-act-btn.del:hover{color:var(--red);border-color:var(--red)}
   .drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:20px;text-align:center;font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);cursor:pointer;transition:border-color .2s;margin-top:12px}
   .drop-zone:hover,.drop-zone.drag{border-color:var(--purple);color:var(--text)}
-  /* Admin & permissions */
+  /* Admin */
   .nav-btn{background:none;border:none;color:var(--muted);font-family:'Space Mono',monospace;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0}
   .nav-btn:hover{color:var(--text)}
   .create-form{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:16px}
@@ -97,7 +108,7 @@
   .user-info{display:flex;align-items:center;gap:8px;font-family:'Space Mono',monospace;font-size:13px}
   .badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:4px;background:var(--green-dim);color:var(--green)}
   .badge.admin{background:rgba(59,130,246,.2);color:var(--blue)}
-  /* Modal permissions */
+  /* Modal */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center}
   .modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
   .modal-title{font-size:16px;font-weight:800;margin-bottom:20px}
@@ -179,9 +190,25 @@
       <button class="btn btn-amber"  id="btn-fix"     onclick="serverAction('fix')"              >🔧 Fix</button>
     </div>
   </div>
+
+  <!-- Console -->
   <div class="card">
     <div class="card-title">Console</div>
-    <div class="console-box" id="console-box"><div class="console-line info">// En attente des logs...</div></div>
+    <div class="console-box" id="console-box">
+      <div class="console-line info">// En attente des logs...</div>
+    </div>
+    <!-- Input commande (visible seulement si permission can_console) -->
+    <div class="console-input-row" id="console-input-row" style="display:none">
+      <span class="console-prompt">&gt;_</span>
+      <input
+        type="text"
+        id="console-input"
+        placeholder="Tape une commande Minecraft… (ex: say Bonjour, op joueur)"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <button class="console-send-btn" id="console-send-btn" onclick="sendConsoleCommand()">Envoyer</button>
+    </div>
   </div>
 </div>
 
@@ -234,8 +261,6 @@
     <div id="new-user-perms" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:8px"></div>
     <div style="margin-top:16px;margin-bottom:8px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase">Accès aux serveurs</div>
     <div id="new-user-servers" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-    <div style="margin-top:16px;margin-bottom:8px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase">Accès aux serveurs</div>
-    <div id="new-user-servers" style="display:flex;flex-wrap:wrap;gap:8px"></div>
   </div>
   <div class="card">
     <div class="card-title">Comptes existants</div>
@@ -266,12 +291,15 @@ let currentPath = '';
 let pollTimer = null;
 let allServers = [];
 let permModalUserId = null;
+let consoleSending = false;
 
+// ── Permissions (+ can_console) ───────────────────────────────
 const ALL_PERMS = [
   { key: 'can_start',      label: '▶ Démarrer le serveur' },
   { key: 'can_stop',       label: '■ Arrêter le serveur' },
   { key: 'can_restart',    label: '↺ Redémarrer le serveur' },
   { key: 'can_fix',        label: '🔧 Fix' },
+  { key: 'can_console',    label: '💬 Envoyer des commandes console' },
   { key: 'can_view_files', label: '📁 Voir les fichiers' },
   { key: 'can_edit_files', label: '✏️ Modifier les fichiers (upload/supprimer)' },
 ];
@@ -377,21 +405,38 @@ async function updateStatus() {
     if (r.status===401) { logout(); return; }
     const data = await r.json();
     const s = STATUS_MAP[data.status]||STATUS_MAP.stopped;
+
     document.getElementById('status-dot').className=`status-dot ${s.dot}`;
     const lbl=document.getElementById('status-label');
     lbl.textContent=s.label; lbl.style.color=s.color;
     document.getElementById('status-meta').textContent=(data.requested_by&&data.status!=='stopped')?`par ${data.requested_by}`:'';
+
     document.getElementById('btn-start').disabled=data.status!=='stopped';
-    document.getElementById('btn-stop').disabled=!['running','stopped'].includes(data.status) ? true : false;
+    document.getElementById('btn-stop').disabled=!['running','stopped'].includes(data.status)?true:false;
     document.getElementById('btn-restart').disabled=data.status!=='running';
     document.getElementById('btn-fix').disabled=!['stopped','running'].includes(data.status);
+
     if (data.server) {
       document.getElementById('panel-server-name').textContent=`${data.server.icon} ${data.server.name}`;
       document.getElementById('server-info').innerHTML=`<div>Port&nbsp;<span>${data.server.port}</span></div><div>Jeu&nbsp;<span>Minecraft Java</span></div>`;
     }
+
     const perms = data.permissions||{};
     const canFiles = currentUser.is_admin || perms.can_view_files || perms.can_edit_files;
     document.getElementById('btn-files').style.display = canFiles ? 'inline-flex' : 'none';
+
+    // Afficher l'input console si permission can_console (ou admin)
+    const canConsole = currentUser.is_admin || perms.can_console;
+    const inputRow = document.getElementById('console-input-row');
+    inputRow.style.display = canConsole ? 'flex' : 'none';
+    if (canConsole) {
+      // Activer/désactiver selon l'état du serveur
+      const isRunning = data.status === 'running';
+      document.getElementById('console-input').disabled = !isRunning || consoleSending;
+      document.getElementById('console-send-btn').disabled = !isRunning || consoleSending;
+    }
+
+    // Logs du serveur courant
     if (data.logs?.length) {
       const box=document.getElementById('console-box');
       box.innerHTML=data.logs.map(l=>{
@@ -414,6 +459,45 @@ async function serverAction(action) {
     toast(data.message,'ok'); updateStatus();
   } catch(e) { toast(e.message,'err'); }
 }
+
+// ── Console commande ──────────────────────────────────────────
+async function sendConsoleCommand() {
+  const input = document.getElementById('console-input');
+  const btn   = document.getElementById('console-send-btn');
+  const command = input.value.trim();
+  if (!command || consoleSending) return;
+
+  consoleSending = true;
+  input.disabled = true;
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    const r = await fetch(`${API}/api/servers/${currentServerId}/console`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    toast(`✅ ${command}`, 'ok');
+    input.value = '';
+  } catch(e) {
+    toast(e.message || 'Erreur envoi', 'err');
+  } finally {
+    consoleSending = false;
+    btn.textContent = 'Envoyer';
+    input.disabled = false;
+    btn.disabled = false;
+    input.focus();
+  }
+}
+
+// Entrée pour envoyer
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('console-input');
+  if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') sendConsoleCommand(); });
+});
 
 // ── Explorateur de fichiers ───────────────────────────────────
 async function showFiles() {
@@ -460,18 +544,13 @@ function renderFileList(items) {
   const list = document.getElementById('file-list');
   const dropZone = document.getElementById('drop-zone');
   const uploadBtn = document.getElementById('upload-btn-wrap');
-
   dropZone.style.display = canEdit ? 'block' : 'none';
   uploadBtn.style.display = canEdit ? 'block' : 'none';
-
   if (!items.length) {
     list.innerHTML='<div style="color:var(--muted);font-family:\'Space Mono\',monospace;font-size:13px;padding:8px">Dossier vide</div>';
     return;
   }
-
-  // Dossiers en premier
   const sorted = [...items].sort((a,b) => (b.is_dir - a.is_dir) || a.name.localeCompare(b.name));
-
   list.innerHTML = sorted.map(f => {
     const icon = f.is_dir ? '📁' : getFileIcon(f.name);
     const clickAction = f.is_dir ? `browseDir('${f.path}')` : `downloadFile('${f.path}','${f.name}')`;
@@ -498,8 +577,7 @@ async function downloadFile(filePath, name) {
     if (!r.ok) { toast('Erreur téléchargement','err'); return; }
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href=url; a.download=name; a.click();
+    const a = document.createElement('a'); a.href=url; a.download=name; a.click();
     URL.revokeObjectURL(url);
   } catch(e) { toast(e.message,'err'); }
 }
@@ -550,10 +628,6 @@ function renderNewUserPerms() {
   fetch(`${API}/api/admin/servers`,{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.json()).then(servers=>{
     document.getElementById('new-user-servers').innerHTML = servers.map(s=>`<div class="server-chip" onclick="this.classList.toggle('active')" data-server="${s.id}">${s.icon} ${s.name}</div>`).join('');
   }).catch(()=>{});
-  fetch(`${API}/api/admin/servers`,{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.json()).then(servers=>{
-    document.getElementById("new-user-servers").innerHTML = servers.map(s=>`<div class="server-chip" onclick="this.classList.toggle('active')" data-server="${s.id}">${s.icon} ${s.name}</div>`).join("");
-  }).catch(()=>{});
-
   document.getElementById('new-user-perms').innerHTML = ALL_PERMS.map(p =>
     `<div class="perm-item"><label><input type="checkbox" id="np-${p.key}"> ${p.label}</label></div>`
   ).join('') + `<div class="perm-item"><label><input type="checkbox" id="np-admin"> 👑 Admin (toutes les permissions)</label></div>`;
@@ -587,17 +661,14 @@ function renderUserList(users) {
     </div>`).join('');
 }
 
-// Modal permissions
 function openPermModal(userId, username) {
   permModalUserId = userId;
   document.getElementById('perm-modal-title').textContent = `Permissions — ${username}`;
-
   fetch(`${API}/api/admin/users`, {headers:{Authorization:`Bearer ${token}`}}).then(r=>r.json()).then(users => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
     const p = user.permissions || {};
     const access = user.serverAccess || [];
-
     let html = `<div class="perm-section">
       <div class="perm-section-title">Rôle</div>
       <div class="perm-grid">
@@ -616,7 +687,6 @@ function openPermModal(userId, username) {
         ${allServers.map(s=>`<div class="server-chip ${access.includes(s.id)?'active':''}" onclick="this.classList.toggle('active')" data-server="${s.id}">${s.icon} ${s.name}</div>`).join('')}
       </div>
     </div>`;
-
     document.getElementById('perm-modal-content').innerHTML = html;
     document.getElementById('perm-modal').style.display='flex';
   });
@@ -635,7 +705,6 @@ async function savePermModal() {
   });
   const is_admin = document.getElementById('pm-admin')?.checked ? 1 : 0;
   const serverAccess = [...document.querySelectorAll('.server-chip.active')].map(el => el.dataset.server);
-
   try {
     const r = await fetch(`${API}/api/admin/users/${permModalUserId}/permissions`, {
       method:'PATCH',
