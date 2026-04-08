@@ -19,19 +19,24 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 
 // ── Données ───────────────────────────────────────────────────
 const users = [];
-let consoleLogs = [];
-let fileRequests  = [];  // requêtes en attente pour l'agent
-let fileResponses = {};  // réponses de l'agent { reqId: data }
+// Logs par serveur  { serverId: [lines...] }
+let serverLogs = {};
+let fileRequests  = [];
+let fileResponses = {};
+// File d'attente des commandes console  [{ id, serverId, command }]
+let consoleQueue  = [];
+// Résultats de commandes  { id: { ok } }
+let cmdResults    = {};
 
 const SERVERS = [
   { id: 'heloufSMP', name: 'HeloufSMP', description: 'Serveur SMP principal', icon: '⛏️', port: 50000 },
-  { id: 'helouftry', name: 'HeloufTry', description: 'Serveur Try', icon: '🎯', port: 50001 },
-
+  { id: 'helouftry', name: 'HeloufTry', description: 'Serveur Try',            icon: '🎯', port: 50001 },
 ];
 
 const serverStates = {};
 SERVERS.forEach(s => {
   serverStates[s.id] = { status: 'stopped', requested_by: null, updated_at: new Date().toISOString() };
+  serverLogs[s.id]   = [];
 });
 
 const userServerAccess = {};
@@ -92,7 +97,9 @@ app.get('/api/servers/:id/status', auth, (req, res) => {
   const server = SERVERS.find(s => s.id === id);
   if (!server) return res.status(404).json({ error: 'Introuvable' });
   const user = users.find(u => u.id === req.user.id);
-  res.json({ ...serverStates[id], logs: consoleLogs.slice(-50), server, permissions: user?.permissions || {} });
+  // Logs spécifiques au serveur demandé
+  const logs = (serverLogs[id] || []).slice(-80);
+  res.json({ ...serverStates[id], logs, server, permissions: user?.permissions || {} });
 });
 
 function serverAction(action) {
@@ -108,8 +115,11 @@ function serverAction(action) {
       return res.status(409).json({ error: `Déjà : ${state.status}` });
     if (action === 'restart' && !['running'].includes(state.status))
       return res.status(409).json({ error: 'Pas en ligne' });
-    // Stop autorisé même si Railway a remis stopped (l'agent vérifie le vrai état)
-    serverStates[id] = { status: action === 'fix' ? 'fixing' : action === 'stop' ? 'stopping' : action === 'start' ? 'starting' : action === 'restart' ? 'restarting' : 'fixing', requested_by: req.user.username, updated_at: new Date().toISOString() };
+    serverStates[id] = {
+      status: action === 'fix' ? 'fixing' : action === 'stop' ? 'stopping' : action === 'start' ? 'starting' : action === 'restart' ? 'restarting' : 'fixing',
+      requested_by: req.user.username,
+      updated_at: new Date().toISOString()
+    };
     res.json({ success: true, message: `Action ${action} envoyée !` });
   };
 }
@@ -118,6 +128,33 @@ app.post('/api/servers/:id/start',   auth, serverAction('start'));
 app.post('/api/servers/:id/stop',    auth, serverAction('stop'));
 app.post('/api/servers/:id/restart', auth, serverAction('restart'));
 app.post('/api/servers/:id/fix',     auth, serverAction('fix'));
+
+// ── Console commande ──────────────────────────────────────────
+app.post('/api/servers/:id/console', auth, async (req, res) => {
+  const { id } = req.params;
+  if (!hasServerAccess(req.user.id, id))
+    return res.status(403).json({ error: 'Accès refusé' });
+  if (!req.user.is_admin && !hasPerm(req.user.id, 'can_console'))
+    return res.status(403).json({ error: 'Permission refusée' });
+  const { command } = req.body;
+  if (!command || !command.trim())
+    return res.status(400).json({ error: 'Commande vide' });
+
+  const cmdId = `cmd-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  consoleQueue.push({ id: cmdId, serverId: id, command: command.trim(), by: req.user.username });
+
+  // Attente résultat (max 20s)
+  const start = Date.now();
+  while (Date.now() - start < 20000) {
+    if (cmdResults[cmdId] !== undefined) {
+      const r = cmdResults[cmdId];
+      delete cmdResults[cmdId];
+      return res.json({ success: r.ok, message: r.ok ? `Commande envoyée !` : 'Erreur envoi commande' });
+    }
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+  res.status(504).json({ error: 'Agent timeout' });
+});
 
 // ── Explorateur de fichiers ───────────────────────────────────
 function makeFileReq(action, filePath, serverId, data = null) {
@@ -176,15 +213,16 @@ app.delete('/api/files/:id', auth, async (req, res) => {
   res.json({ success: result.ok });
 });
 
-// ── Agent ─────────────────────────────────────────────────────
+// ── Agent endpoints ───────────────────────────────────────────
 app.get('/api/agent/poll', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
   const pending = [...fileRequests];
-  fileRequests = [];
-  res.json({ servers: serverStates, file_requests: pending });
+  const cmds    = [...consoleQueue];
+  fileRequests  = [];
+  consoleQueue  = [];
+  res.json({ servers: serverStates, file_requests: pending, console_commands: cmds });
 });
 
-// L'agent peut syncer son statut local au démarrage
 app.post('/api/agent/sync', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
   const { statuses } = req.body;
@@ -207,9 +245,24 @@ app.post('/api/agent/confirm', (req, res) => {
   res.json({ success: true });
 });
 
+// Logs reçus de l'agent — stockés par serveur
 app.post('/api/agent/logs', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
-  consoleLogs = req.body.logs || [];
+  const { logs, serverId } = req.body;
+  if (serverId && Array.isArray(logs)) {
+    serverLogs[serverId] = logs;
+  } else if (Array.isArray(logs)) {
+    // Fallback : si pas de serverId, on met dans heloufSMP
+    serverLogs['heloufSMP'] = logs;
+  }
+  res.json({ success: true });
+});
+
+// Confirmation d'exécution d'une commande console
+app.post('/api/agent/cmd-done', (req, res) => {
+  if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
+  const { id, ok } = req.body;
+  if (id) cmdResults[id] = { ok: !!ok };
   res.json({ success: true });
 });
 
@@ -232,13 +285,20 @@ app.post('/api/admin/create-user', auth, adminOnly, (req, res) => {
 });
 
 app.get('/api/admin/users', auth, adminOnly, (req, res) => {
-  res.json(users.map(u => ({ id: u.id, username: u.username, is_admin: u.is_admin, permissions: u.permissions, serverAccess: userServerAccess[u.id] || [] })));
+  res.json(users.map(u => ({
+    id: u.id,
+    username: u.username,
+    is_admin: u.is_admin,
+    permissions: u.permissions,
+    serverAccess: userServerAccess[u.id] || []
+  })));
 });
 
 app.patch('/api/admin/users/:id/permissions', auth, adminOnly, (req, res) => {
   const user = users.find(u => u.id == req.params.id);
   if (!user) return res.status(404).json({ error: 'Introuvable' });
   user.permissions = req.body.permissions || {};
+  if (req.body.is_admin !== undefined) user.is_admin = req.body.is_admin ? 1 : 0;
   userServerAccess[user.id] = req.body.serverAccess || [];
   res.json({ success: true, message: 'Permissions sauvegardées !' });
 });
