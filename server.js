@@ -20,7 +20,9 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 // ── Données ───────────────────────────────────────────────────
 const users = [];
 // Logs par serveur  { serverId: [lines...] }
-let serverLogs = {};
+let serverLogs    = {};
+// Joueurs connectés par serveur  { serverId: [pseudo...] }
+let serverPlayers = {};
 let fileRequests  = [];
 let fileResponses = {};
 // File d'attente des commandes console  [{ id, serverId, command }]
@@ -35,8 +37,9 @@ const SERVERS = [
 
 const serverStates = {};
 SERVERS.forEach(s => {
-  serverStates[s.id] = { status: 'stopped', requested_by: null, updated_at: new Date().toISOString() };
-  serverLogs[s.id]   = [];
+  serverStates[s.id]  = { status: 'stopped', requested_by: null, updated_at: new Date().toISOString() };
+  serverLogs[s.id]    = [];
+  serverPlayers[s.id] = [];
 });
 
 const userServerAccess = {};
@@ -99,7 +102,8 @@ app.get('/api/servers/:id/status', auth, (req, res) => {
   const user = users.find(u => u.id === req.user.id);
   // Logs spécifiques au serveur demandé
   const logs = (serverLogs[id] || []).slice(-80);
-  res.json({ ...serverStates[id], logs, server, permissions: user?.permissions || {} });
+  const players = serverPlayers[id] || [];
+  res.json({ ...serverStates[id], logs, players, server, permissions: user?.permissions || {} });
 });
 
 function serverAction(action) {
@@ -248,12 +252,15 @@ app.post('/api/agent/confirm', (req, res) => {
 // Logs reçus de l'agent — stockés par serveur
 app.post('/api/agent/logs', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
-  const { logs, serverId } = req.body;
+  const { logs, serverId, players } = req.body;
   if (serverId && Array.isArray(logs)) {
     serverLogs[serverId] = logs;
   } else if (Array.isArray(logs)) {
-    // Fallback : si pas de serverId, on met dans heloufSMP
     serverLogs['heloufSMP'] = logs;
+  }
+  // Joueurs connectés
+  if (serverId && Array.isArray(players)) {
+    serverPlayers[serverId] = players;
   }
   res.json({ success: true });
 });
