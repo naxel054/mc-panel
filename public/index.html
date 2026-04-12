@@ -77,6 +77,9 @@
   .console-send-btn{background:var(--green);border:none;color:#fff;font-family:'Syne',monospace;font-weight:700;font-size:13px;padding:10px 20px;cursor:pointer;transition:opacity .15s;flex-shrink:0}
   .console-send-btn:hover{opacity:.85}
   .console-send-btn:disabled{opacity:.3;cursor:not-allowed}
+  /* Badges joueurs connectés */
+  .player-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:20px;padding:5px 12px;font-family:'Space Mono',monospace;font-size:12px;color:var(--green);font-weight:700}
+  .player-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);display:inline-block;animation:pulse 2s infinite}
   /* Explorateur */
   .file-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
   .breadcrumb{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);flex:1;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
@@ -208,6 +211,13 @@
         spellcheck="false"
       >
       <button class="console-send-btn" id="console-send-btn" onclick="sendConsoleCommand()">Envoyer</button>
+    </div>
+    <!-- Joueurs connectés -->
+    <div id="players-section" style="margin-top:14px;display:none">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
+        Joueurs connectés <span id="players-count" style="color:var(--green);margin-left:6px">0</span>
+      </div>
+      <div id="players-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
     </div>
   </div>
 </div>
@@ -447,6 +457,19 @@ async function updateStatus() {
         return `<div class="console-line ${cls}">${l.replace(/</g,'&lt;')}</div>`;
       }).join('');
       box.scrollTop=box.scrollHeight;
+    }
+
+    // Joueurs connectés
+    const players = data.players || [];
+    const section = document.getElementById('players-section');
+    const list    = document.getElementById('players-list');
+    const count   = document.getElementById('players-count');
+    section.style.display = (data.status === 'running') ? 'block' : 'none';
+    count.textContent = players.length;
+    if (players.length === 0) {
+      list.innerHTML = '<span style="color:var(--muted);font-family:\'Space Mono\',monospace;font-size:12px">Personne en ligne</span>';
+    } else {
+      list.innerHTML = players.map(p => `<span class="player-badge">${p}</span>`).join('');
     }
   } catch {}
 }
