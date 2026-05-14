@@ -8,7 +8,7 @@ const multer  = require('multer');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 const SECRET       = 'mcpanel_jwt_secret_2024';
-const AGENT_SECRET = process.env.AGENT_SECRET || 'heloufSMP_secret_2024';
+const AGENT_SECRET = process.env.AGENT_SECRET || 'bigchillSMP_secret_2024';
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -31,8 +31,8 @@ let consoleQueue  = [];
 let cmdResults    = {};
 
 const SERVERS = [
-  { id: 'heloufSMP', name: 'HeloufSMP', description: 'Serveur SMP principal', icon: '⛏️', port: 50000 },
-  { id: 'helouftry', name: 'HeloufTry', description: 'Serveur Try',            icon: '🎯', port: 50001 },
+  { id: 'bigchillSMP', name: 'BigChillSMP', description: 'Serveur SMP principal', icon: '⛏️', port: 50000 },
+  { id: 'bigchilltest', name: 'BigChillTest', description: 'Serveur Test',            icon: '🎯', port: 50001 },
 ];
 
 const serverStates = {};
@@ -182,7 +182,7 @@ async function waitForResponse(reqId, timeout = 15000) {
 
 app.get('/api/files/:id', auth, async (req, res) => {
   if (!hasPerm(req.user.id, 'can_view_files')) return res.status(403).json({ error: 'Permission refusée' });
-  const reqId = makeFileReq('list', req.query.path || '', req.params.id || 'heloufSMP');
+  const reqId = makeFileReq('list', req.query.path || '', req.params.id || 'bigchillSMP');
   const result = await waitForResponse(reqId);
   if (!result) return res.status(504).json({ error: 'Agent timeout' });
   res.json(result);
@@ -190,7 +190,7 @@ app.get('/api/files/:id', auth, async (req, res) => {
 
 app.get('/api/files/:id/download', auth, async (req, res) => {
   if (!hasPerm(req.user.id, 'can_view_files')) return res.status(403).json({ error: 'Permission refusée' });
-  const reqId = makeFileReq('download', req.query.path || '', req.params.id || 'heloufSMP');
+  const reqId = makeFileReq('download', req.query.path || '', req.params.id || 'bigchillSMP');
   const result = await waitForResponse(reqId);
   if (!result || !result.data) return res.status(504).json({ error: 'Agent timeout' });
   const filename = path.basename(req.query.path);
@@ -203,7 +203,7 @@ app.post('/api/files/:id/upload', auth, upload.single('file'), async (req, res) 
   if (!req.file) return res.status(400).json({ error: 'Aucun fichier' });
   const filePath = req.body.path || req.file.originalname;
   const b64 = req.file.buffer.toString('base64');
-  const reqId = makeFileReq('upload', filePath, req.params.id || 'heloufSMP', b64);
+  const reqId = makeFileReq('upload', filePath, req.params.id || 'bigchillSMP', b64);
   const result = await waitForResponse(reqId);
   if (!result) return res.status(504).json({ error: 'Agent timeout' });
   res.json({ success: result.ok, message: result.ok ? `"${req.file.originalname}" uploadé !` : 'Erreur upload' });
@@ -211,7 +211,7 @@ app.post('/api/files/:id/upload', auth, upload.single('file'), async (req, res) 
 
 app.delete('/api/files/:id', auth, async (req, res) => {
   if (!hasPerm(req.user.id, 'can_edit_files')) return res.status(403).json({ error: 'Permission refusée' });
-  const reqId = makeFileReq('delete', req.query.path || '', req.params.id || 'heloufSMP');
+  const reqId = makeFileReq('delete', req.query.path || '', req.params.id || 'bigchillSMP');
   const result = await waitForResponse(reqId);
   if (!result) return res.status(504).json({ error: 'Agent timeout' });
   res.json({ success: result.ok });
@@ -256,7 +256,7 @@ app.post('/api/agent/logs', (req, res) => {
   if (serverId && Array.isArray(logs)) {
     serverLogs[serverId] = logs;
   } else if (Array.isArray(logs)) {
-    serverLogs['heloufSMP'] = logs;
+    serverLogs['bigchillSMP'] = logs;
   }
   // Joueurs connectés
   if (serverId && Array.isArray(players)) {
