@@ -63,10 +63,12 @@
   .server-info{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);margin-bottom:24px;display:flex;gap:24px;flex-wrap:wrap}
   .server-info span{color:var(--text)}
   .action-row{display:flex;gap:10px;flex-wrap:wrap}
+  /* Console */
   .console-box{background:#0d1117;border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:16px;font-family:'Space Mono',monospace;font-size:12px;color:#a0aec0;height:280px;overflow-y:auto;line-height:1.6}
   .console-line.warn{color:var(--amber)}
   .console-line.error{color:var(--red)}
   .console-line.info{color:var(--green)}
+  /* Input console */
   .console-input-row{display:flex;gap:0;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);overflow:hidden;background:#0d1117}
   .console-prompt{display:flex;align-items:center;padding:0 12px;color:var(--green);font-family:'Space Mono',monospace;font-size:13px;font-weight:700;flex-shrink:0;background:#0d1117}
   #console-input{flex:1;background:transparent;border:none;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;padding:10px 8px;outline:none}
@@ -75,8 +77,10 @@
   .console-send-btn{background:var(--green);border:none;color:#fff;font-family:'Syne',monospace;font-weight:700;font-size:13px;padding:10px 20px;cursor:pointer;transition:opacity .15s;flex-shrink:0}
   .console-send-btn:hover{opacity:.85}
   .console-send-btn:disabled{opacity:.3;cursor:not-allowed}
+  /* Badges joueurs connectés */
   .player-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:20px;padding:5px 12px;font-family:'Space Mono',monospace;font-size:12px;color:var(--green);font-weight:700}
   .player-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);display:inline-block;animation:pulse 2s infinite}
+  /* Explorateur */
   .file-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
   .breadcrumb{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);flex:1;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
   .breadcrumb span{cursor:pointer;color:var(--blue)}
@@ -95,6 +99,7 @@
   .file-act-btn.del:hover{color:var(--red);border-color:var(--red)}
   .drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:20px;text-align:center;font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);cursor:pointer;transition:border-color .2s;margin-top:12px}
   .drop-zone:hover,.drop-zone.drag{border-color:var(--purple);color:var(--text)}
+  /* Admin */
   .nav-btn{background:none;border:none;color:var(--muted);font-family:'Space Mono',monospace;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0}
   .nav-btn:hover{color:var(--text)}
   .create-form{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:16px}
@@ -106,6 +111,7 @@
   .user-info{display:flex;align-items:center;gap:8px;font-family:'Space Mono',monospace;font-size:13px}
   .badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:4px;background:var(--green-dim);color:var(--green)}
   .badge.admin{background:rgba(59,130,246,.2);color:var(--blue)}
+  /* Modal */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center}
   .modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
   .modal-title{font-size:16px;font-weight:800;margin-bottom:20px}
@@ -124,30 +130,6 @@
   #toast.show{transform:translateX(-50%) translateY(0)}
   #toast.ok{border-color:var(--green);color:var(--green)}
   #toast.err{border-color:var(--red);color:var(--red)}
-
-  /* ── Widget IA ── */
-  #ia-toggle{position:fixed;bottom:24px;right:24px;background:#16a34a;color:white;border:none;border-radius:50px;padding:12px 20px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 20px rgba(22,163,74,0.4);z-index:9999;transition:transform 0.2s,opacity 0.2s}
-  #ia-toggle:hover{transform:scale(1.05)}
-  #ia-panel{display:none;position:fixed;bottom:80px;right:24px;width:360px;height:480px;background:#1a1a2e;border:1px solid #2d2d4e;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.5);z-index:9998;flex-direction:column;overflow:hidden}
-  #ia-panel.open{display:flex}
-  #ia-header{background:#16a34a;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;font-weight:700;color:white;font-size:14px;flex-shrink:0}
-  #ia-close{background:none;border:none;color:white;font-size:18px;cursor:pointer;line-height:1}
-  #ia-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:#2d2d4e transparent}
-  .ia-msg{padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.55;max-width:90%;white-space:pre-wrap}
-  .ia-ai{background:#242444;border:1px solid #2d2d4e;align-self:flex-start;border-bottom-left-radius:3px;color:#e2e8f0}
-  .ia-user{background:#15532e;border:1px solid #166534;align-self:flex-end;border-bottom-right-radius:3px;color:#dcfce7}
-  .ia-typing{display:flex;gap:4px;align-items:center;padding:12px 14px}
-  .ia-typing span{width:6px;height:6px;background:#16a34a;border-radius:50%;animation:iabounce 1.2s infinite}
-  .ia-typing span:nth-child(2){animation-delay:0.2s}
-  .ia-typing span:nth-child(3){animation-delay:0.4s}
-  @keyframes iabounce{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-5px);opacity:1}}
-  #ia-input-area{display:flex;gap:8px;padding:12px;border-top:1px solid #2d2d4e;flex-shrink:0;background:#1a1a2e}
-  #ia-input{flex:1;background:#242444;border:1px solid #2d2d4e;border-radius:8px;padding:8px 12px;color:#e2e8f0;font-size:13px;outline:none}
-  #ia-input:focus{border-color:#16a34a}
-  #ia-input::placeholder{color:#4a5568}
-  #ia-send{background:#16a34a;border:none;border-radius:8px;color:white;padding:8px 14px;cursor:pointer;font-size:16px;transition:opacity 0.15s}
-  #ia-send:hover{opacity:0.85}
-  #ia-send:disabled{opacity:0.4;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -211,16 +193,26 @@
       <button class="btn btn-amber"  id="btn-fix"     onclick="serverAction('fix')"              >🔧 Fix</button>
     </div>
   </div>
+
+  <!-- Console -->
   <div class="card">
     <div class="card-title">Console</div>
     <div class="console-box" id="console-box">
       <div class="console-line info">// En attente des logs...</div>
     </div>
+    <!-- Input commande (visible seulement si permission can_console) -->
     <div class="console-input-row" id="console-input-row" style="display:none">
       <span class="console-prompt">&gt;_</span>
-      <input type="text" id="console-input" placeholder="Tape une commande Minecraft… (ex: say Bonjour, op joueur)" autocomplete="off" spellcheck="false">
+      <input
+        type="text"
+        id="console-input"
+        placeholder="Tape une commande Minecraft… (ex: say Bonjour, op joueur)"
+        autocomplete="off"
+        spellcheck="false"
+      >
       <button class="console-send-btn" id="console-send-btn" onclick="sendConsoleCommand()">Envoyer</button>
     </div>
+    <!-- Joueurs connectés -->
     <div id="players-section" style="margin-top:14px;display:none">
       <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
         Joueurs connectés <span id="players-count" style="color:var(--green);margin-left:6px">0</span>
@@ -300,22 +292,6 @@
 
 <div id="toast"></div>
 
-<!-- Widget IA -->
-<button id="ia-toggle" onclick="toggleIA()" title="Aide IA">🤖 IA</button>
-<div id="ia-panel">
-  <div id="ia-header">
-    <span>🤖 Assistant IA</span>
-    <button onclick="toggleIA()" id="ia-close">✕</button>
-  </div>
-  <div id="ia-messages">
-    <div class="ia-msg ia-ai">Salut ! Je suis l'assistant IA de ce panel. Je peux t'expliquer comment utiliser le panel, gérer tes serveurs Minecraft, les permissions, les commandes... Pose-moi n'importe quelle question ! ⛏️</div>
-  </div>
-  <div id="ia-input-area">
-    <input type="text" id="ia-input" placeholder="Ex: Comment démarrer un serveur ?" onkeydown="if(event.key==='Enter') sendIA()" />
-    <button onclick="sendIA()" id="ia-send">➤</button>
-  </div>
-</div>
-
 <script>
 const API = '';
 let token = localStorage.getItem('mc_token');
@@ -327,6 +303,7 @@ let allServers = [];
 let permModalUserId = null;
 let consoleSending = false;
 
+// ── Permissions (+ can_console) ───────────────────────────────
 const ALL_PERMS = [
   { key: 'can_start',      label: '▶ Démarrer le serveur' },
   { key: 'can_stop',       label: '■ Arrêter le serveur' },
@@ -337,6 +314,7 @@ const ALL_PERMS = [
   { key: 'can_edit_files', label: '✏️ Modifier les fichiers (upload/supprimer)' },
 ];
 
+// ── Auth ──────────────────────────────────────────────────────
 async function login() {
   const username = document.getElementById('login-user').value.trim();
   const password = document.getElementById('login-pass').value;
@@ -370,6 +348,7 @@ function getPayload() {
   try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
 }
 
+// ── Serveurs ──────────────────────────────────────────────────
 async function showServers() {
   clearInterval(pollTimer);
   currentServerId = null;
@@ -403,6 +382,7 @@ async function loadServers() {
   } catch {}
 }
 
+// ── Panel serveur ─────────────────────────────────────────────
 async function openServer(serverId) {
   clearInterval(pollTimer);
   currentServerId = serverId;
@@ -435,29 +415,38 @@ async function updateStatus() {
     if (r.status===401) { logout(); return; }
     const data = await r.json();
     const s = STATUS_MAP[data.status]||STATUS_MAP.stopped;
+
     document.getElementById('status-dot').className=`status-dot ${s.dot}`;
     const lbl=document.getElementById('status-label');
     lbl.textContent=s.label; lbl.style.color=s.color;
     document.getElementById('status-meta').textContent=(data.requested_by&&data.status!=='stopped')?`par ${data.requested_by}`:'';
+
     document.getElementById('btn-start').disabled=data.status!=='stopped';
     document.getElementById('btn-stop').disabled=!['running','stopped'].includes(data.status)?true:false;
     document.getElementById('btn-restart').disabled=data.status!=='running';
     document.getElementById('btn-fix').disabled=!['stopped','running'].includes(data.status);
+
     if (data.server) {
       document.getElementById('panel-server-name').textContent=`${data.server.icon} ${data.server.name}`;
       document.getElementById('server-info').innerHTML=`<div>Port&nbsp;<span>${data.server.port}</span></div><div>Jeu&nbsp;<span>Minecraft Java</span></div>`;
     }
+
     const perms = data.permissions||{};
     const canFiles = currentUser.is_admin || perms.can_view_files || perms.can_edit_files;
     document.getElementById('btn-files').style.display = canFiles ? 'inline-flex' : 'none';
+
+    // Afficher l'input console si permission can_console (ou admin)
     const canConsole = currentUser.is_admin || perms.can_console;
     const inputRow = document.getElementById('console-input-row');
     inputRow.style.display = canConsole ? 'flex' : 'none';
     if (canConsole) {
+      // Activer/désactiver selon l'état du serveur
       const isRunning = data.status === 'running';
       document.getElementById('console-input').disabled = !isRunning || consoleSending;
       document.getElementById('console-send-btn').disabled = !isRunning || consoleSending;
     }
+
+    // Logs du serveur courant
     if (data.logs?.length) {
       const box=document.getElementById('console-box');
       box.innerHTML=data.logs.map(l=>{
@@ -469,6 +458,8 @@ async function updateStatus() {
       }).join('');
       box.scrollTop=box.scrollHeight;
     }
+
+    // Joueurs connectés
     const players = data.players || [];
     const section = document.getElementById('players-section');
     const list    = document.getElementById('players-list');
@@ -492,15 +483,18 @@ async function serverAction(action) {
   } catch(e) { toast(e.message,'err'); }
 }
 
+// ── Console commande ──────────────────────────────────────────
 async function sendConsoleCommand() {
   const input = document.getElementById('console-input');
   const btn   = document.getElementById('console-send-btn');
   const command = input.value.trim();
   if (!command || consoleSending) return;
+
   consoleSending = true;
   input.disabled = true;
   btn.disabled = true;
   btn.textContent = '…';
+
   try {
     const r = await fetch(`${API}/api/servers/${currentServerId}/console`, {
       method: 'POST',
@@ -522,11 +516,13 @@ async function sendConsoleCommand() {
   }
 }
 
+// Entrée pour envoyer
 document.addEventListener('DOMContentLoaded', () => {
   const inp = document.getElementById('console-input');
   if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') sendConsoleCommand(); });
 });
 
+// ── Explorateur de fichiers ───────────────────────────────────
 async function showFiles() {
   clearInterval(pollTimer);
   hideAll();
@@ -642,6 +638,7 @@ async function deleteFile(filePath, name) {
   } catch(e) { toast(e.message,'err'); }
 }
 
+// ── Admin ─────────────────────────────────────────────────────
 async function showAdmin() {
   clearInterval(pollTimer);
   hideAll();
@@ -786,75 +783,6 @@ function toast(msg,type='ok') {
 
 document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
 if (token) showServers(); else document.getElementById('login-screen').style.display='flex';
-
-// ── Widget IA ──────────────────────────────────────────────────
-const iaHistory = [];
-let iaLoading = false;
-
-function toggleIA() {
-  const panel = document.getElementById('ia-panel');
-  panel.classList.toggle('open');
-  if (panel.classList.contains('open')) {
-    document.getElementById('ia-input').focus();
-  }
-}
-
-function iaAddMsg(role, text) {
-  const box = document.getElementById('ia-messages');
-  const div = document.createElement('div');
-  div.className = `ia-msg ${role === 'user' ? 'ia-user' : 'ia-ai'}`;
-  div.textContent = text;
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
-
-function iaShowTyping() {
-  const box = document.getElementById('ia-messages');
-  const div = document.createElement('div');
-  div.className = 'ia-msg ia-ai ia-typing';
-  div.id = 'ia-typing';
-  div.innerHTML = '<span></span><span></span><span></span>';
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
-
-function iaRemoveTyping() {
-  const el = document.getElementById('ia-typing');
-  if (el) el.remove();
-}
-
-async function sendIA() {
-  const input = document.getElementById('ia-input');
-  const text = input.value.trim();
-  if (!text || iaLoading) return;
-  iaAddMsg('user', text);
-  iaHistory.push({ role: 'user', content: text });
-  input.value = '';
-  iaLoading = true;
-  document.getElementById('ia-send').disabled = true;
-  iaShowTyping();
-  try {
-    const res = await fetch('/api/ia', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: iaHistory })
-    });
-    const data = await res.json();
-    iaRemoveTyping();
-    if (data.reply) {
-      iaAddMsg('ai', data.reply);
-      iaHistory.push({ role: 'assistant', content: data.reply });
-    } else {
-      iaAddMsg('ai', '❌ Erreur : ' + (data.error || 'Réponse invalide'));
-    }
-  } catch (err) {
-    iaRemoveTyping();
-    iaAddMsg('ai', '❌ Impossible de contacter l\'IA.');
-  }
-  iaLoading = false;
-  document.getElementById('ia-send').disabled = false;
-  input.focus();
-}
 </script>
 </body>
 </html>
