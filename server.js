@@ -19,11 +19,15 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 
 // ── Données ───────────────────────────────────────────────────
 const users = [];
+// Logs par serveur  { serverId: [lines...] }
 let serverLogs    = {};
+// Joueurs connectés par serveur  { serverId: [pseudo...] }
 let serverPlayers = {};
 let fileRequests  = [];
 let fileResponses = {};
+// File d'attente des commandes console  [{ id, serverId, command }]
 let consoleQueue  = [];
+// Résultats de commandes  { id: { ok } }
 let cmdResults    = {};
 
 const SERVERS = [
@@ -96,6 +100,7 @@ app.get('/api/servers/:id/status', auth, (req, res) => {
   const server = SERVERS.find(s => s.id === id);
   if (!server) return res.status(404).json({ error: 'Introuvable' });
   const user = users.find(u => u.id === req.user.id);
+  // Logs spécifiques au serveur demandé
   const logs = (serverLogs[id] || []).slice(-80);
   const players = serverPlayers[id] || [];
   res.json({ ...serverStates[id], logs, players, server, permissions: user?.permissions || {} });
@@ -142,6 +147,7 @@ app.post('/api/servers/:id/console', auth, async (req, res) => {
   const cmdId = `cmd-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   consoleQueue.push({ id: cmdId, serverId: id, command: command.trim(), by: req.user.username });
 
+  // Attente résultat (max 20s)
   const start = Date.now();
   while (Date.now() - start < 20000) {
     if (cmdResults[cmdId] !== undefined) {
@@ -243,6 +249,7 @@ app.post('/api/agent/confirm', (req, res) => {
   res.json({ success: true });
 });
 
+// Logs reçus de l'agent — stockés par serveur
 app.post('/api/agent/logs', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
   const { logs, serverId, players } = req.body;
@@ -251,12 +258,14 @@ app.post('/api/agent/logs', (req, res) => {
   } else if (Array.isArray(logs)) {
     serverLogs['bigchillSMP'] = logs;
   }
+  // Joueurs connectés
   if (serverId && Array.isArray(players)) {
     serverPlayers[serverId] = players;
   }
   res.json({ success: true });
 });
 
+// Confirmation d'exécution d'une commande console
 app.post('/api/agent/cmd-done', (req, res) => {
   if (req.query.secret !== AGENT_SECRET) return res.status(403).json({ error: 'Accès refusé' });
   const { id, ok } = req.body;
@@ -308,71 +317,5 @@ app.delete('/api/admin/users/:id', auth, adminOnly, (req, res) => {
 });
 
 app.get('/api/admin/servers', auth, adminOnly, (req, res) => res.json(SERVERS));
-
-// ── IA Chat ───────────────────────────────────────────────────
-app.post('/api/ia', async (req, res) => {
-  const { messages } = req.body;
-  if (!messages || !Array.isArray(messages))
-    return res.status(400).json({ error: 'Messages manquants' });
-
-  try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 1000,
-        messages: [
-          {
-            role: 'system',
-            content: `Tu es l'assistant IA intégré au panel de gestion des serveurs Minecraft de Naxel. Tu connais parfaitement ce panel et tu aides les utilisateurs à comprendre comment il fonctionne.
-
-Voici comment fonctionne ce panel :
-
-**Le panel gère 2 serveurs Minecraft :**
-- BigChillSMP (port 50000) : le serveur SMP principal
-- BigChillTest (port 50001) : le serveur de test
-
-**Fonctionnalités du panel :**
-- Démarrer / Arrêter / Redémarrer / Fix un serveur via des boutons
-- Voir les logs en temps réel de chaque serveur
-- Voir les joueurs connectés
-- Envoyer des commandes dans la console du serveur
-- Explorateur de fichiers (voir, télécharger, uploader, supprimer des fichiers)
-- Gestion des utilisateurs avec permissions granulaires (admin peut créer des comptes avec accès limité)
-
-**Permissions disponibles pour les utilisateurs non-admin :**
-- can_start : démarrer le serveur
-- can_stop : arrêter le serveur
-- can_restart : redémarrer le serveur
-- can_fix : fix le serveur
-- can_console : envoyer des commandes console
-- can_view_files : voir les fichiers
-- can_edit_files : modifier/uploader/supprimer des fichiers
-
-**Comment fonctionne le système :**
-- Un agent Python tourne sur la machine qui héberge les serveurs Minecraft
-- L'agent poll le panel toutes les secondes pour récupérer les actions à effectuer
-- L'agent envoie les logs et le statut des serveurs au panel en temps réel
-
-Tu réponds en français, de façon claire et concise. Tu peux aussi répondre à des questions générales sur Minecraft et la gestion de serveurs.`
-          },
-          ...messages
-        ]
-      })
-    });
-
-    const data = await response.json();
-    if (data.error) return res.status(500).json({ error: data.error.message });
-    res.json({ reply: data.choices[0].message.content });
-
-  } catch (err) {
-    console.error('Erreur IA:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
 
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
