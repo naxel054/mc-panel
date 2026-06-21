@@ -318,4 +318,34 @@ app.delete('/api/admin/users/:id', auth, adminOnly, (req, res) => {
 
 app.get('/api/admin/servers', auth, adminOnly, (req, res) => res.json(SERVERS));
 
+// ── AI Chat proxy ─────────────────────────────────────────────
+app.post('/api/ai/chat', auth, adminOnly, async (req, res) => {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) return res.status(503).json({ error: 'Clé API Groq non configurée' });
+  const { message } = req.body;
+  if (!message || !message.trim()) return res.status(400).json({ error: 'Message vide' });
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'mixtral-8x7b-32768',
+        messages: [
+          {
+            role: 'system',
+            content: 'Tu es un expert en serveurs Minecraft. Tu aides les administrateurs avec la gestion de serveur, les plugins, les commandes, la configuration et le dépannage. Réponds de façon concise et pratique en français.'
+          },
+          { role: 'user', content: message.trim() }
+        ],
+        max_tokens: 500
+      })
+    });
+    const data = await r.json();
+    if (!r.ok) return res.status(r.status).json({ error: data.error?.message || 'Erreur API Groq' });
+    res.json({ reply: data.choices?.[0]?.message?.content || 'Pas de réponse.' });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Erreur serveur' });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Serveur lancé sur le port ${PORT}`));
